@@ -1,13 +1,22 @@
 import React,{useState,useCallback} from 'react';
-import {Form,Header,Label,Input,Button,LinkContainer} from './styles';
+import {Form,Header,Label,Input,Button,LinkContainer,Error,Success} from './styles';
 import useInput from '@hooks/useInput';
+import axios from "axios";
+import { Link, Redirect} from 'react-router-dom';
+import useSWR from 'swr';
+import fetcher from '@utils/fetcher';
+
 
 const SignUp = ()=>{
+    const { data, error, revalidate, mutate } = useSWR('/api/users',fetcher);
     const [email,onChangeEmail]=useInput('');
     const [nickname,onChangeNickname]= useInput('');
     const [password,,setPassword] = useInput('');
     const [passwordCheck,,setPasswordCheck] = useInput('');
     const [mismatchError, setMismatchError] = useState(false);
+
+    const [signUpError,setSignUpError]= useState('');
+    const [signUpSuccess,setSignUpSuccess]= useState(false);
 
     const onChangePassword = useCallback((e)=>{
         setPassword(e.target.value);
@@ -22,9 +31,35 @@ const SignUp = ()=>{
         [password],
       );
     
-      const onSubmit = useCallback(()=>{
-
-      },[])
+      const onSubmit = useCallback((e)=>{
+        e.preventDefault();
+        if(!mismatchError && nickname){
+            console.log('회원 가입하러가기')
+            setSignUpError("");
+            setSignUpSuccess(false);
+            axios.post('http://localhost:3095/api/users',{
+                email,
+                nickname,
+                password
+            })
+            .then((response)=>{
+                console.log(response)
+                setSignUpSuccess(true)
+            })
+            .catch((error)=>{
+                console.log(error.response)
+                setSignUpError(error.response.data);
+            })
+            .finally(()=>{});
+        }
+      },[email,nickname,password,mismatchError,passwordCheck])
+      
+      if (data === undefined) {
+        return <div>로딩중...</div>;
+      }
+      if (data) {
+        return <Redirect to="/workspace/sleact/channel/" />;
+      }
     return (
         <div id="container">
           <Header>Sleact</Header>
@@ -58,10 +93,10 @@ const SignUp = ()=>{
                   onChange={onChangePasswordCheck}
                 />
               </div>
-              {/* {mismatchError && <Error>비밀번호가 일치하지 않습니다.</Error>}
+              {mismatchError && <Error>비밀번호가 일치하지 않습니다.</Error>}
               {!nickname && <Error>닉네임을 입력해주세요.</Error>}
               {signUpError && <Error>{signUpError}</Error>}
-              {signUpSuccess && <Success>회원가입되었습니다! 로그인해주세요.</Success>} */}
+              {signUpSuccess && <Success>회원가입되었습니다! 로그인해주세요.</Success>}
             </Label>
             <Button type="submit">회원가입</Button>
           </Form>
